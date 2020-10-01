@@ -9,53 +9,73 @@ import com.company.Moveset;
 // State: Board state class to store 2D array board and generate possible moves
 public class State {
     int[][] board;
-    ArrayList<State> children;
-    int value;   //State's evaluation result
+    ArrayList<State> children = new ArrayList<>();
+    int stateValue;   //State's evaluation result
+
     Moveset moveset = new Moveset();
-    int[] previousShiptoMove = new int[2];
+    Integer[] lastMoveMade;
+
+    int[] previousShiptoMove;
     int[] flagshipCoor;
-    int goldShipCurrentNum;
-    int silverShipCurrentNum;
 
-
-    // GOLD1, GOLD2, SILVER1, SILVER2
     // Dictates what is allowed to happen in this ply
-    String stateType;
+    String stateType;   // GOLD1, GOLD2, SILVER1, SILVER2
 
     public State(int[][] map, String type){
         board = map;
         stateType = type;
-        setFlagshipCoor_countShips();
+    }
+
+    // Previous architecture kept moves and resulting states separated, however in a search tree the paths are important,
+    // especially if one of those will eventually be selected as the optimal move.
+    public State(int[][] map, String type, int[] lastMove){
+        board = map;
+        stateType = type;
+
+        Integer[] newLast = new Integer[lastMove.length];
+        for (int i = 0; i < lastMove.length; i++ ) {
+            newLast[i] = lastMove[i];
+        }
+        lastMoveMade = newLast;
     }
 
     // Custom constructor for second movement (excludes previously moved ship from moving again)
-    public State(int[][] map, String type, int[] previousShiptoMove){
+    public State(int[][] map, String type, int[] lastMove, int[] previousShiptoMove){
         board = map;
         stateType = type;
         this.previousShiptoMove = previousShiptoMove;
-        setFlagshipCoor_countShips();
+
+        Integer[] newLast = new Integer[lastMove.length];
+        for (int i = 0; i < lastMove.length; i++ ) {
+            newLast[i] = lastMove[i];
+        }
+        lastMoveMade = newLast;
     }
 
-    public void setFlagshipCoor_countShips() {
-        goldShipCurrentNum = 0;
-        silverShipCurrentNum = 0;
+    // Movement potential of flagship for evaluation function
+    public int getNumberOfFlagshipMoves(){
+        return moveset.flagship.toArray().length;
+    }
+
+    // Counts ships for evaluation function (Returns: int[] {gold ship #, silver ship #}
+    public int[] countShips() {
+        int goldShipCurrentNum = 0;
+        int silverShipCurrentNum = 0;
         boolean flag = false;
         for (int i = 0; i < board.length; i++) {
             for (int j = 0; j < board.length; j++) {
                 int ship = board[i][j];
                 if ( ship == 1 ){ silverShipCurrentNum++; }
                 else if ( ship == 2 ){ goldShipCurrentNum++; }
-
                 // Find Flagship
-                if (ship == 3) {
+                else if ( ship == 3 ) {
                     flagshipCoor = new int[]{i, j};
                     // return;
                     goldShipCurrentNum++;
-                    flag = true;
                 }
             }
         }
-        if(!flag){flagshipCoor = new int[]{};}
+        return new int[]{goldShipCurrentNum, silverShipCurrentNum};
     }
 
     // Call this method to initiate move search
@@ -67,7 +87,7 @@ public class State {
         }
     }
 
-    // When called, pulls all legal moves found [with exploreChildren] and generates all resulting board configurations
+    // Pulls all legal moves found [with exploreChildren] and generates all resulting board configurations in (type: State)
     // MOVE PRIORITIZATION
     // MOVE LIMITATIONS
     public ArrayList<State> prepareChildrenStatesforTree(){
@@ -77,12 +97,11 @@ public class State {
                 moveset.flagship.forEach(move -> maps.add(playMove(move, "SILVER1")));
                 moveset.capture.forEach(move -> maps.add(playMove(move, "SILVER1")));
                 moveset.move.forEach(move -> maps.add(playMoveFirstMovement(move, "GOLD2", new int[]{move[2], move[3]})));
-
                 break;
             case "SILVER1":
+                moveset.flagCapture.forEach(move -> maps.add(playMove(move, "GOLD1")));
                 moveset.capture.forEach(move -> maps.add(playMove(move, "GOLD1")));
                 moveset.move.forEach(move -> maps.add(playMoveFirstMovement(move, "SILVER2", new int[]{move[2], move[3]})));
-
                 break;
             case "GOLD2":
                 moveset.move.forEach(move -> maps.add(playMove(move, "SILVER1")));
@@ -95,7 +114,7 @@ public class State {
         return maps;    // These are the children states (type:State)
     }
 
-    // Terrible way to play a move (returns a new State instance)       // Added ship type to update Flagship Coordinate for efficiency i nterminal state check
+    // Terrible way to play a move (returns a new State instance)       // Added ship type to update Flagship Coordinate for efficiency in terminal state check
     public State playMove(Integer[] move, String nextStateType){
         int x = move[0];
         int y = move[1];
@@ -115,7 +134,7 @@ public class State {
         temp[x][y] = 0;
         temp[x_new][y_new] = ship;
 
-        return new State(temp, nextStateType);
+        return new State(temp, nextStateType, new int[]{x, y, x_new, y_new});
     }
 
     // Terrible way to play a move 2 electric bugaloo, only for second part of the movement action (returns a new State instance)
@@ -136,7 +155,7 @@ public class State {
         temp[x][y] = 0;
         temp[x_new][y_new] = ship;
 
-        return new State(temp, nextStateType, lastShipMove);
+        return new State(temp, nextStateType, new int[]{x, y, x_new, y_new}, lastShipMove);
     }
 
     // Find GOLD ships and calculate all legal moves
@@ -146,8 +165,8 @@ public class State {
             for (int j = 0; j < board.length; j++) {
                 if (board[i][j] == 2) {
                     // Skip the found ship if it's the one moved in first movement.
-                    if (previousShiptoMove.length != 0){
-                        if (previousShiptoMove[0] == i && previousShiptoMove[1] == j){
+                    if (previousShiptoMove != null){
+                        if (i == previousShiptoMove[0] && j == previousShiptoMove[1]){
                             continue;
                         }
                     }
@@ -175,8 +194,8 @@ public class State {
             for(int j = 0; j < board.length; j++){
                 if (board[i][j] == 1) {
                     // Skip the found ship if it's the one moved in first movement.
-                    if (previousShiptoMove.length != 0){
-                        if (previousShiptoMove[0] == i && previousShiptoMove[1] == j){
+                    if (previousShiptoMove != null){
+                        if (i == previousShiptoMove[0] && j == previousShiptoMove[1]){
                             continue;
                         }
                     }
@@ -441,18 +460,38 @@ public class State {
 
     // RETURN == 0: Not terminal, 1: Gold wins, 2: Silver wins
     public int isTerminalState() {
-        int i = flagshipCoor[0];
-        int j = flagshipCoor[1];
         int len = board.length;
-
-        // Flagship DED
-        if(flagshipCoor.length == 0){return 2;}
-        // Flagship escaped
-        if (i == 0 || i == len - 1 || j == 0 || j == len - 1) {
-            return 1;
-        } else {    // Flagship still in play
-            return 0;
+        for (int i = 0; i < len; i++){
+            for (int j = 0; j < len; j++){
+                if(board[i][j] == 3){
+                if (i == 0 || i == len - 1 || j == 0 || j == len - 1) { // Flagship escaped
+                        return 1;
+                    } else {    // Flagship still in play
+                        return 0;
+                    }
+                }
+            }
         }
+        return 2;   // Flagship DED
+    }
+
+    // To find the move that led to optimal child
+    public State findChosenChild(){
+        /* DEBUG
+        for(State child : children){
+            System.out.println("Value that won: " + stateValue);
+            System.out.println("This child: " + child.stateValue);
+        }*/
+        for(State child : children){
+            if (stateValue == child.stateValue){
+                return child;
+            }
+        }
+        return null;
+    }
+
+    public void printAllInfo(){
+        System.out.println(Arrays.toString(this.lastMoveMade) + this.stateType + this.stateValue + Arrays.deepToString(this.board) + Arrays.toString(this.previousShiptoMove));
     }
 
 }

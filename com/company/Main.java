@@ -10,34 +10,62 @@ import java.util.concurrent.TimeUnit;
 
 public class Main {
 
-    public static void main(String[] args) throws InterruptedException {
-        // IF SIDE IS GOLD (true), CURRENT STATE TYPE IS ALWAYS GOLD1
-        // IF SIDE IS SILVER (false), CURRENT STATE TYPE IS ALWAYS SILVER1
+    public static void main(String[] args){
+
+        // ----GAME SETTINGS---------------------------------------//
+        // IF SIDE IS GOLD (true), IF SIDE IS SILVER (false)
         boolean isSideGold = false;
-        String type = isSideGold ? "GOLD1" : "SILVER1";    // cool
+        String type = isSideType(isSideGold);    // cool
+        // Determine SEARCH DEPTH
+        int depth = 3;
+        //---------------------------------------------------------//
 
+        // -----GAME SETUP-----------------------------------------//
         int[][] map = new int[11][11];
+        ShipSetup(map);
         Game gameState = new Game(map, type);
+        SearchTree searchTree = new SearchTree(gameState, depth);
+        //---------------------------------------------------------//
 
-        // Init board
-        BoardSetup(map);
+        // Infinite self-play loop
+        while(true) {
+            // ---Timer start---
+            long startTime = System.currentTimeMillis();
 
+            // DEBUG : Playout
+            //gameState.play(searchTree.doMinimaxAndReturnBestMove(depth));
+            //int fuck = SearchTree.minmax_alpha_beta(searchTree.root, depth, -8000, 8000);
 
-        // Instantiate map as State
+            ArrayList<Integer[]> chosenMoves = searchTree.doAlphaBetaAndReturnBestMove(depth);
+            System.out.println("\nAlpha-Beta search completed. ");
 
-        playOnePlyDeepGame(map, type);
+            // ---Timer end---
+            long endTime = System.currentTimeMillis();
+            long timeElapsed = endTime - startTime;
+            System.out.println("Execution time in seconds: " + (double) timeElapsed / 1000);
+            //-----------------
+
+            // Play the optimal moves
+            gameState.play(chosenMoves);
+
+            // CIRCULATE TYPE
+            isSideGold = !isSideGold;
+            State newRoot = new State(gameState.board, isSideType(isSideGold));
+            searchTree.root = newRoot;
+
+            // Visualize
+            GUI(gameState.board);
+        }
 
         //for DEBUG purposes
+        //playOnePlyDeepGame(map, type);
         //currentState.moveset.move.forEach(move -> System.out.println(Arrays.toString(move)));
         //GenerateMovesforTile(new int[]{1, 3}, map);
-
-        // Visualize
-        //GUI(gameState.board);
     }
 
 
     // Fills the board to starting position (takes empty map)
-    public static void BoardSetup(int[][] map){
+    public static void ShipSetup(int[][] map){
         map[5][5] = 3;  //FLAGSHIP
         // Silver
         map[1][3] = map[1][4] = map[1][5] = map[1][6] = map[1][7] = 1;
@@ -45,16 +73,16 @@ public class Main {
         map[3][9] = map[4][9] = map[5][9] = map[6][9] = map[7][9] = 1;
         map[9][3] = map[9][4] = map[9][5] = map[9][6] = map[9][7] = 1;
 
-        map[9][5] = 0;
-        map[10][4] = 1;
+        //map[9][5] = 0;
+        //map[10][4] = 1;
         //Gold
         map[3][4] = map[3][5] = map[3][6] = 2;
         map[4][3] = map[5][3] = map[6][3] = 2;
         map[4][7] = map[5][7] = map[6][7] = 2;
         map[7][4] = map[7][5] = map[7][6] = 2;
 
-        map[7][5] = 0;
-        map[8][6] = 2;
+        //map[7][5] = 0;
+        //map[8][6] = 2;
 
         /*map = new int[][]{
                 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -97,6 +125,21 @@ public class Main {
             letters = letters + alphabet[i] + "\t";
         }
         System.out.println(letters);
+    }
+
+    public static void howManyPossibleMoves(Game gameState){
+        int sum = 0;
+        gameState.exploreChildren();
+        ArrayList<State> nextGen = gameState.prepareChildrenStatesforTree();
+        sum += nextGen.toArray().length;
+        for(State nextGenS : nextGen){
+            if(nextGenS.stateType.equals("GOLD2") || nextGenS.stateType.equals("SILVER2")){
+                nextGenS.exploreChildren();
+                sum += nextGenS.prepareChildrenStatesforTree().toArray().length;
+            }
+        }
+
+        System.out.println("This is the number of all possible moves that can be done in current state: " + sum);
     }
 
 
@@ -239,7 +282,12 @@ public class Main {
     }
 
 
+    public static String isSideType(boolean isGold){
+       if (isGold) {return "GOLD1";} else {return "SILVER1";}
+    }
 
+    // Convert array indeces to regular chess notation
+    //public static String indexToNotation(int[] move){}
 
     // TO DO: CLONE ENTIRE RESPECTIVE ROW & COLUMN to decrease the number of calls made to MAP//
     // TO DO : PLEASE GET RID OF 4 LOOPS (DISGUSTING CODE)//
