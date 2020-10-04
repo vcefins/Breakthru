@@ -17,7 +17,7 @@ public class Main {
         boolean isSideGold = false;
         String type = isSideType(isSideGold);    // cool
         // Determine SEARCH DEPTH
-        int depth = 3;
+        int depth = 2;
         //---------------------------------------------------------//
 
         // -----GAME SETUP-----------------------------------------//
@@ -287,7 +287,23 @@ public class Main {
     }
 
     // Convert array indeces to regular chess notation
-    //public static String indexToNotation(int[] move){}
+    public static String indexToNotation(Integer[] move){
+        int prevX = move[0];
+        int prevY = move[1];
+        int nextX = move[2];
+        int nextY = move[3];
+
+        char[] alphabet = "abcdefghijk".toCharArray();
+
+        String prevXS = String.valueOf(11 - prevX);
+        char prevYS = alphabet[prevY];
+        String nextXS = String.valueOf(11 - nextX);;
+        char nextYS = alphabet[nextY];
+
+
+        return prevXS + prevYS + " -> " + nextXS + nextYS;
+    }
+
 
     // TO DO: CLONE ENTIRE RESPECTIVE ROW & COLUMN to decrease the number of calls made to MAP//
     // TO DO : PLEASE GET RID OF 4 LOOPS (DISGUSTING CODE)//
