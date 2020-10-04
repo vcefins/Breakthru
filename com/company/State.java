@@ -334,7 +334,7 @@ public class State {
                 // try to capture x-1 , y-1
                 if (board[x - 1][y - 1] == 1) {
                     if (ship == 3 && IsFlagSafe(new int[]{x - 1, y - 1})) {
-                        moveset.capture.add(new Integer[]{x, y, x - 1, y - 1});
+                        moveset.flagship.add(new Integer[]{x, y, x - 1, y - 1});
                     } else {
                         moveset.capture.add(new Integer[]{x, y, x - 1, y - 1});
                     }
@@ -344,7 +344,7 @@ public class State {
                 // try to capture x-1 , y+1
                 if (board[x - 1][y + 1] == 1) {
                     if (ship == 3 && IsFlagSafe(new int[]{x - 1, y + 1})) {
-                        moveset.capture.add(new Integer[]{x, y, x - 1, y + 1});
+                        moveset.flagship.add(new Integer[]{x, y, x - 1, y + 1});
                     } else {
                         moveset.capture.add(new Integer[]{x, y, x - 1, y + 1});
                     }
@@ -356,22 +356,23 @@ public class State {
                 // try to capture x+1 , y-1
                 if (board[x + 1][y - 1] == 1) {
                     if (ship == 3 && IsFlagSafe(new int[]{x + 1, y - 1})) {
-                        moveset.capture.add(new Integer[]{x, y, x + 1, y - 1});
+                        moveset.flagship.add(new Integer[]{x, y, x + 1, y - 1});
                     } else {
                         moveset.capture.add(new Integer[]{x, y, x + 1, y - 1});
                     }
                 }
-                if (y != board.length - 1) {
-                    // try to capture x+1 , y+1
-                    if (board[x + 1][y + 1] == 1) {
-                        if(ship == 3 && IsFlagSafe(new int[]{x + 1, y + 1})){
-                            moveset.capture.add(new Integer[]{x, y, x+1, y+1});
-                        } else {
-                            moveset.capture.add(new Integer[]{x, y, x + 1, y + 1});
-                        }
+            }
+            if (y != board.length - 1) {
+                // try to capture x+1 , y+1
+                if (board[x + 1][y + 1] == 1) {
+                    if(ship == 3 && IsFlagSafe(new int[]{x + 1, y + 1})){
+                        moveset.flagship.add(new Integer[]{x, y, x+1, y+1});
+                    } else {
+                        moveset.capture.add(new Integer[]{x, y, x + 1, y + 1});
                     }
                 }
             }
+
         }
     }
 

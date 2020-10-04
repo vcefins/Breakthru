@@ -162,8 +162,8 @@ public class SearchTree {
             for(State child : children){
                 // CHANGE RULES OF DEPTH HERE
                 int newDepth = depth;
-                //if(child.stateType.equals("SILVER1")){newDepth--;}
-                newDepth--;
+                if(child.stateType.equals("SILVER1")){newDepth--;}
+                //newDepth--;
                 //
                 int value = minmax_alpha_beta(child, newDepth, alpha, beta);
                 alpha = alpha > value ? alpha : value;
@@ -188,8 +188,8 @@ public class SearchTree {
             for(State child : children){
                 // CHANGE RULES OF DEPTH HERE
                 int newDepth = depth;
-                //if(child.stateType.equals("SILVER1")){newDepth--;}
-                newDepth--;
+                if(child.stateType.equals("GOLD1")){newDepth--;}
+                //newDepth--;
                 //
                 int value = minmax_alpha_beta(child, newDepth, alpha, beta);
                 beta = beta < value ? beta : value;
@@ -287,12 +287,15 @@ public class SearchTree {
         Integer[] firstChosenMove = chosenChild.lastMoveMade;
         chosenMove.add(firstChosenMove);
 
-        System.out.println("\n\n\n\n\t\t\tFirst chosen move: " + Arrays.toString(firstChosenMove));
+        //System.out.println("\n\n\n\n\t\t\tFirst chosen move: " + Arrays.toString(firstChosenMove));
+        System.out.println("\n\n\n\n\t\t\tFirst chosen move: " + Main.indexToNotation(firstChosenMove));
+
 
         if(chosenChild.stateType.equals("SILVER2") || chosenChild.stateType.equals("GOLD2")){
             Integer[] secondChosenMove = chosenChild.findChosenChild().lastMoveMade;
             chosenMove.add(secondChosenMove);
-            System.out.println("\n\t\t\tSecond chosen move: " + Arrays.toString(secondChosenMove));
+            //System.out.println("\n\t\t\tSecond chosen move: " + Arrays.toString(secondChosenMove));
+            System.out.println("\n\t\t\tSecond chosen move: " + Main.indexToNotation(secondChosenMove));
         }
         return chosenMove;
     }
@@ -400,10 +403,16 @@ public class SearchTree {
 
         int goldFlagMovesNum = state.getNumberOfFlagshipMoves();
 
-        int goldFlagMoveValue = 10;
+        //-------WEIGHTS-------------
+        int goldFlagMoveValue = 5;
         int goldShipValue = -11;
         int silverShipValue = 7;
+        int checkingFlagValue = -200;
+        //---------------------------
 
+        if(isCheckFlag(state)){
+            sumValue += checkingFlagValue;
+        }
         sumValue += goldFlagMovesNum * goldFlagMoveValue;
         sumValue += goldShipValue * (goldTotalShipNum - goldCurrentShipNum);
         sumValue += silverShipValue * (silverTotalShipNum - silverCurrentShipNum);
@@ -417,6 +426,61 @@ public class SearchTree {
 
 
         return sumValue;
+    }
+
+    // Flagship'e destekli bir şekilde şah çeken bir kombinasyon var mı, yoksa yok mu?
+    public static boolean isCheckFlag(State s){
+        int flagX = s.flagshipCoor[0];
+        int flagY = s.flagshipCoor[1];
+        int[][] board = s.board;
+
+        // FLAG in possible risk of capture
+        // I'M GOING TO MAKE IT AN IF ELSE CHAIN BECAUSE IF THERE ARE MULTIPLE SILVER SHIPS CHECKING FLAG, AND ONLY ONE OF THEM HAS SUPPORT
+        // THEN IT'S NO DIFFERENT THAN NOT HAVING A SUPPORT AT ALL.
+        if (board[flagX-1][flagY-1] == 1){
+            if (isSupported(board, flagX-1, flagY-1, 1)){return true;}
+        } else if (board[flagX-1][flagY+1] == 1){
+            if (isSupported(board, flagX-1, flagY+1, 1)){return true;}
+        } else if (board[flagX+1][flagY-1] == 1){
+            if (isSupported(board, flagX+1, flagY-1, 1)){return true;}
+        } else if (board[flagX+1][flagY+1] == 1){
+            if (isSupported(board, flagX+1, flagY+1, 1)){return true;}
+        }
+        return false;
+    }
+
+    // Check if the current ship has an ally
+    // x, y --> x-coordinate and y-coordinate of current ship that is checking the flagship
+    public static boolean isSupported(int[][] board, int x, int y, int ship){
+        if (x != 0) {
+            if (y != 0) {
+                // try to capture x-1 , y-1
+                if (board[x - 1][y - 1] == ship) {
+                    return true;
+                }
+            }
+            if (y != board.length - 1) {
+                // try to capture x-1 , y+1
+                if (board[x - 1][y + 1] == ship) {
+                    return true;
+                }
+            }
+        }
+        if (x != board.length - 1) {
+            if (y != 0) {
+                // try to capture x+1 , y-1
+                if (board[x + 1][y - 1] == ship) {
+                    return true;
+                }
+            }
+            if (y != board.length - 1) {
+                    // try to capture x+1 , y+1
+                if (board[x + 1][y + 1] == ship) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
 }
