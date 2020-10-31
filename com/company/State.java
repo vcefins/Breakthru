@@ -16,6 +16,7 @@ public class State {
     Integer[] lastMoveMade;
 
     int[] previousShiptoMove;
+    // Not necessary
     int[] flagshipCoor;
 
     // Dictates what is allowed to happen in this ply
@@ -52,6 +53,7 @@ public class State {
         lastMoveMade = newLast;
     }
 
+
     // Movement potential of flagship for evaluation function
     public int getNumberOfFlagshipMoves(){
         return moveset.flagship.toArray().length;
@@ -87,7 +89,7 @@ public class State {
         }
     }
 
-    // Pulls all legal moves found [with exploreChildren] and generates all resulting board configurations in (type: State)
+    // Pulls and executes all legal moves found [with exploreChildren] and generates all resulting board configurations in (type: State)
     // MOVE PRIORITIZATION
     // MOVE LIMITATIONS
     public ArrayList<State> prepareChildrenStatesforTree(){
@@ -225,9 +227,7 @@ public class State {
                 if(ship == 2){
                     moveset.move.add(new Integer[]{x, y, x, i});   //Move --> [x, y -> x, i]
                 } else {
-                    if(IsFlagSafe(coor)){
-                        moveset.flagship.add(new Integer[]{x, y, x, i});
-                    }
+                    moveset.flagship.add(new Integer[]{x, y, x, i});
                 }
             }
         }
@@ -333,7 +333,7 @@ public class State {
             if (y != 0) {
                 // try to capture x-1 , y-1
                 if (board[x - 1][y - 1] == 1) {
-                    if (ship == 3 && IsFlagSafe(new int[]{x - 1, y - 1})) {
+                    if (ship == 3) {
                         moveset.flagship.add(new Integer[]{x, y, x - 1, y - 1});
                     } else {
                         moveset.capture.add(new Integer[]{x, y, x - 1, y - 1});
@@ -343,7 +343,7 @@ public class State {
             if (y != board.length - 1) {
                 // try to capture x-1 , y+1
                 if (board[x - 1][y + 1] == 1) {
-                    if (ship == 3 && IsFlagSafe(new int[]{x - 1, y + 1})) {
+                    if (ship == 3) {
                         moveset.flagship.add(new Integer[]{x, y, x - 1, y + 1});
                     } else {
                         moveset.capture.add(new Integer[]{x, y, x - 1, y + 1});
@@ -355,7 +355,7 @@ public class State {
             if (y != 0) {
                 // try to capture x+1 , y-1
                 if (board[x + 1][y - 1] == 1) {
-                    if (ship == 3 && IsFlagSafe(new int[]{x + 1, y - 1})) {
+                    if (ship == 3) {
                         moveset.flagship.add(new Integer[]{x, y, x + 1, y - 1});
                     } else {
                         moveset.capture.add(new Integer[]{x, y, x + 1, y - 1});
@@ -365,7 +365,7 @@ public class State {
             if (y != board.length - 1) {
                 // try to capture x+1 , y+1
                 if (board[x + 1][y + 1] == 1) {
-                    if(ship == 3 && IsFlagSafe(new int[]{x + 1, y + 1})){
+                    if(ship == 3){
                         moveset.flagship.add(new Integer[]{x, y, x+1, y+1});
                     } else {
                         moveset.capture.add(new Integer[]{x, y, x + 1, y + 1});
@@ -459,13 +459,26 @@ public class State {
         return true;
     }
 
+    public boolean isFlagDanger(){
+        for(int i = 0; i < board.length; i++){
+            for(int j = 0; j < board.length; j++){
+                if (board[i][j] == 3){
+                    if (board[i-1][j-1] == 1 || board[i+1][j-1] == 1 || board[i-1][j+1] == 1 || board[i+1][j+1] == 1){
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     // RETURN == 0: Not terminal, 1: Gold wins, 2: Silver wins
     public int isTerminalState() {
         int len = board.length;
         for (int i = 0; i < len; i++){
             for (int j = 0; j < len; j++){
                 if(board[i][j] == 3){
-                if (i == 0 || i == len - 1 || j == 0 || j == len - 1) { // Flagship escaped
+                    if (i == 0 || i == len - 1 || j == 0 || j == len - 1) { // Flagship escaped
                         return 1;
                     } else {    // Flagship still in play
                         return 0;
@@ -478,11 +491,6 @@ public class State {
 
     // To find the move that led to optimal child
     public State findChosenChild(){
-        /* DEBUG
-        for(State child : children){
-            System.out.println("Value that won: " + stateValue);
-            System.out.println("This child: " + child.stateValue);
-        }*/
         for(State child : children){
             if (stateValue == child.stateValue){
                 return child;
@@ -492,7 +500,7 @@ public class State {
     }
 
     public void printAllInfo(){
-        System.out.println(Arrays.toString(this.lastMoveMade) + this.stateType + this.stateValue + Arrays.deepToString(this.board) + Arrays.toString(this.previousShiptoMove));
+        System.out.println(Arrays.toString(this.lastMoveMade) + "\n" + this.stateType + "\n" + this.stateValue + "\n" + Arrays.deepToString(this.board) + "\n" + Arrays.toString(this.previousShiptoMove));
     }
 
 }

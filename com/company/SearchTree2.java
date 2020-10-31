@@ -1,25 +1,29 @@
 package com.company;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
-public class SearchTree {
+// New search tree with improved evaluation function
+public class SearchTree2 {
+    private static Game game;
     State root;
     int depthR;
-    public static boolean AIplaysSilver = false;
+    public static boolean AIplaysSilver;
     //ArrayList<Integer[]> path;  // Dynamic update
 
     //-------EVALUATION FUNCTION WEIGHTS-------------
     public static int goldFlagMoveValue = 3; //3
-    public static int goldShipValue = -10;  //-10
-    public static int silverShipValue = 10; //10
-    public static int checkingFlagValue = -200; //-200
-    //public static int silverFreedomValue = -1;  //null
+    public static int goldShipValue = -30;  //-10
+    public static int silverShipValue = 30; //10
+    public static int checkingFlagValue = -100; //-200
+    public static int silverFreedomValue = -1;  //null
+    public static int nextMoveSilverWin = -500;
     //-----------------------------------------------
 
-    public SearchTree(State rootNode, int depth) {
+    public SearchTree2(Game game, State rootNode, int depth, boolean isSideSilver) {
+        SearchTree2.game = game;
         root = rootNode;
         depthR = depth;
+        AIplaysSilver = isSideSilver;
     }
 
     public static void setSilverShipValue(int value){
@@ -39,7 +43,7 @@ public class SearchTree {
     public static int minimax(State state, int depth) {
         if (depth <= 0 || state.isTerminalState() != 0) {
             int eval = stateEvaluation(state);
-            System.out.println("[" + state.stateType +"-" + depth + "] A state value CREATED in depth " + depth + " : " + eval);
+            //System.out.println("[" + state.stateType +"-" + depth + "] A state value CREATED in depth " + depth + " : " + eval);
             //return stateEvaluation(state);
             return eval;
         }
@@ -86,7 +90,7 @@ public class SearchTree {
         }
 
         state.stateValue = score;
-        System.out.println("[" + state.stateType +"-" + depth + "] A state value UPDATED in depth " + depth + " : " + score);
+        //System.out.println("[" + state.stateType +"-" + depth + "] A state value UPDATED in depth " + depth + " : " + score);
         return score;
     }
 
@@ -160,7 +164,7 @@ public class SearchTree {
     }
 
     // Minimax algorithm with ALPHA-BETA pruning
-    public static int minmax_alpha_beta(State state, int depth, int alpha, int beta) {
+    public static int minmax_alpha_beta(State state, int depth, int alpha, int beta){
         if (depth <= 0.0 || state.isTerminalState() != 0) {     // Leaf Node
             return stateEvaluation(state);
         }
@@ -229,6 +233,10 @@ public class SearchTree {
 
         int score = 0;
 
+        // ---Timer start-- for time-limited deepening ---
+        long startTime = System.currentTimeMillis();
+        int timeLimit = 50;
+
         // MAXIMIZE THE VALUE
         if (root.stateType.equals("GOLD1") || root.stateType.equals("GOLD2")) {
             score = -8000;
@@ -241,13 +249,13 @@ public class SearchTree {
             int counter = 1;
             for(State child : children){
                 // DEBUG :
-                System.out.println("Iterating through child " + counter + " of " + children.toArray().length);
+                //System.out.println("Iterating through child " + counter + " of " + children.toArray().length);
                 // ----------CHANGE RULES OF DEPTH HERE----------------------
                 // Current setting is to skip depth reduction, when the move is movement of a ship for the first time.
                 int newDepth = depth;
                 if(child.stateType.equals("SILVER1")){newDepth--;}
                 //newDepth--;
-                //
+                //-----------
                 int value = andAnotherOne(child, newDepth, rootAlpha, rootBeta);
                 if ( value > score ){
                     score = value;
@@ -260,7 +268,13 @@ public class SearchTree {
 
                 //DEBUG
                 counter++;
-                if (rootBeta <= rootAlpha){break;}
+                if (rootBeta <= rootAlpha){
+                    break;}
+
+                long currentTime = System.currentTimeMillis();
+                if((currentTime - startTime)/1000 >= timeLimit){
+                    break;
+                }
             }
         }
 
@@ -276,13 +290,13 @@ public class SearchTree {
             int counter = 1;
             for(State child : children){
                 // DEBUG :
-                System.out.println("Iterating through child " + counter + " of " + children.toArray().length);
+                //System.out.println("Iterating through child " + counter + " of " + children.toArray().length);
                 // ----------CHANGE RULES OF DEPTH HERE----------------------
                 // Current setting is to skip depth reduction, when the move is movement of a ship for the first time.
                 int newDepth = depth;
                 if(child.stateType.equals("SILVER1")){newDepth--;}
                 //newDepth--;
-                //
+                //-----------
                 int value = andAnotherOne(child, newDepth, rootAlpha, rootBeta);
                 if ( value < score ){
                     score = value;
@@ -293,21 +307,27 @@ public class SearchTree {
                 rootBeta = rootBeta < value ? rootBeta : value;
 
                 counter++;
-                if (rootBeta <= rootAlpha){break;}
+                if (rootBeta <= rootAlpha){
+                    break;}
+
+                long currentTime = System.currentTimeMillis();
+                if((currentTime - startTime)/1000 >= timeLimit){
+                    break;
+                }
             }
         }
 
         // Assign fittest value among children to root value.
         root.stateValue = score;
 
-        //-----Find the chosed child(ren) and get the optimal moves-----------
+        //-----Find the chosen child(ren) and get the optimal moves-----------
         ArrayList<Integer[]> chosenMove = new ArrayList<>();
         State chosenChild = root.findChosenChild();
         Integer[] firstChosenMove = chosenChild.lastMoveMade;
         chosenMove.add(firstChosenMove);
 
         //System.out.println("\n\n\n\n\t\t\tFirst chosen move: " + Arrays.toString(firstChosenMove));
-        System.out.println("\n\n\n\n\t\t\tFirst chosen move: " + Main.indexToNotation(firstChosenMove));
+        System.out.println("\n\n\n\t\t\tFirst chosen move: " + Main.indexToNotation(firstChosenMove));
 
 
         if(chosenChild.stateType.equals("SILVER2") || chosenChild.stateType.equals("GOLD2")){
@@ -320,7 +340,7 @@ public class SearchTree {
     }
 
     // P.S This is a SECOND cheating method that replicates minmax_alpha_beta but stores the second generation of children nodes.
-    // This is because movement moves require two plies.
+    // This is because a selected movement move requires two plies.
     public int andAnotherOne(State state, int depth, int alpha, int beta) {
         // This is a DOUBLE fake iteration in the recursive loop to command only the first generation of moves AND THE SECONDARY SHIP MOVE to get stored in root.children.
         if (depth <= 0.0 || state.isTerminalState() != 0) {     // Leaf Node
@@ -424,25 +444,32 @@ public class SearchTree {
 
         int goldFlagMovesNum = state.getNumberOfFlagshipMoves();
 
-        /*if (AIplaysSilver){
+        // If AI plays silver, the evaluation function includes the number of potential Silver moves
+        if (AIplaysSilver && game.round <= 7){
             state.FindSilverandGenerate();
             int silverFreedom = state.moveset.move.size();
             sumValue += silverFreedom * silverFreedomValue;
-        }*/
+        }
 
         if(isCheckFlag(state)){
             sumValue += checkingFlagValue;
         }
+
+        // IF evaluated state is Silver's to move, and a silver ship is a position to capture the flagship
+        if(state.stateType.equals("SILVER1") && state.isFlagDanger()){
+            sumValue += nextMoveSilverWin;
+        }
+
         sumValue += goldFlagMovesNum * goldFlagMoveValue;
         sumValue += goldShipValue * (goldTotalShipNum - goldCurrentShipNum);
         sumValue += silverShipValue * (silverTotalShipNum - silverCurrentShipNum);
         //--------------------
 
         // DEBUG
-        /*Main.GUI(state.board);
-        System.out.println("State Type: " + state.stateType);
-        System.out.println("Number of gold flagship moves: " + goldFlagMovesNum);
-        System.out.println("Evaluation Product: " + sumValue + "\n\n\n");*/
+        //Main.GUI(state.board);
+        //System.out.println("State Type: " + state.stateType);
+        //System.out.println("Number of gold flagship moves: " + goldFlagMovesNum);
+        //System.out.println("Evaluation Product: " + sumValue + "\n\n\n");
 
         return sumValue;
     }
